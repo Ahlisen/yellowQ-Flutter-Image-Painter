@@ -65,7 +65,8 @@ class DrawImage extends CustomPainter {
         case PaintMode.freeStyle:
           // Use velocity-based stroke width if velocity points are available
           if (item.velocityPoints != null && item.velocityPoints!.isNotEmpty) {
-            _drawVelocityBasedFreeStyle(canvas, item.velocityPoints!, _painter);
+            _drawVelocityBasedFreeStyle(
+                canvas, item.velocityPoints!, _painter, _controller);
           } else {
             // Fallback to original implementation
             for (int i = 0; i < _offset.length - 1; i++) {
@@ -197,15 +198,17 @@ class DrawImage extends CustomPainter {
 
   ///Draws free style with velocity-based variable stroke width
   void _drawVelocityBasedFreeStyle(
-      Canvas canvas, List<VelocityPoint> velocityPoints, Paint basePainter) {
+      Canvas canvas,
+      List<VelocityPoint> velocityPoints,
+      Paint basePainter,
+      ImagePainterController controller) {
     for (int i = 0; i < velocityPoints.length - 1; i++) {
       final point1 = velocityPoints[i];
       final point2 = velocityPoints[i + 1];
 
       // Calculate stroke width based on velocity (inverse relationship - higher velocity = thinner stroke)
       // Velocity is normalized, so we use a factor to control the effect
-      const velocityFactor =
-          0.8; // Adjust this to control how much velocity affects stroke width
+      final velocityFactor = controller.velocityFactor; // Get from controller
       final minStroke =
           basePainter.strokeWidth * 0.2; // Minimum stroke width (20% of base)
       final maxStroke =
@@ -233,7 +236,7 @@ class DrawImage extends CustomPainter {
     // Draw single points if there's only one point
     if (velocityPoints.length == 1) {
       final point = velocityPoints[0];
-      const velocityFactor = 0.3;
+      final velocityFactor = controller.velocityFactor; // Get from controller
       final minStroke = basePainter.strokeWidth * 0.2;
       final maxStroke = basePainter.strokeWidth * 1.0;
 

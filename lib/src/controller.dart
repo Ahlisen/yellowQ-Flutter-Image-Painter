@@ -30,6 +30,7 @@ class ImagePainterController extends ChangeNotifier {
   bool _paintInProgress = false;
   bool _isSignature = false;
   bool _velocityBasedStrokeWidth = false;
+  double _velocityFactor = 0.8;
 
   ui.Image? get image => _image;
 
@@ -57,6 +58,8 @@ class ImagePainterController extends ChangeNotifier {
   List<VelocityPoint> get velocityPoints => _velocityPoints;
   
   bool get velocityBasedStrokeWidth => _velocityBasedStrokeWidth;
+  
+  double get velocityFactor => _velocityFactor;
 
   Offset? get start => _start;
 
@@ -75,6 +78,7 @@ class ImagePainterController extends ChangeNotifier {
     String text = '',
     bool fill = false,
     bool velocityBasedStrokeWidth = false,
+    double velocityFactor = 0.8,
   }) {
     _strokeWidth = strokeWidth;
     _color = color;
@@ -82,6 +86,7 @@ class ImagePainterController extends ChangeNotifier {
     _text = text;
     _fill = fill;
     _velocityBasedStrokeWidth = velocityBasedStrokeWidth;
+    _velocityFactor = velocityFactor;
   }
 
   void setImage(ui.Image image) {
@@ -195,6 +200,7 @@ class ImagePainterController extends ChangeNotifier {
     String? text,
     int? strokeMultiplier,
     bool? velocityBasedStrokeWidth,
+    double? velocityFactor,
   }) {
     _strokeWidth = strokeWidth ?? _strokeWidth;
     _color = color ?? _color;
@@ -203,6 +209,7 @@ class ImagePainterController extends ChangeNotifier {
     _text = text ?? _text;
     _strokeMultiplier = strokeMultiplier ?? _strokeMultiplier;
     _velocityBasedStrokeWidth = velocityBasedStrokeWidth ?? _velocityBasedStrokeWidth;
+    _velocityFactor = velocityFactor ?? _velocityFactor;
     notifyListeners();
   }
 
