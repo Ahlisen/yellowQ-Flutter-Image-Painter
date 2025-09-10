@@ -51,6 +51,7 @@ class ImagePainter extends StatefulWidget {
     this.onUndo,
     this.onClear,
     this.velocityBasedStrokeWidth = false,
+    this.hideModes = false,
   }) : super(key: key);
 
   ///Constructor for loading image from network url.
@@ -81,6 +82,7 @@ class ImagePainter extends StatefulWidget {
     VoidCallback? onUndo,
     VoidCallback? onClear,
     bool velocityBasedStrokeWidth = false,
+    bool hideModes = false,
   }) {
     return ImagePainter._(
       key: key,
@@ -109,6 +111,7 @@ class ImagePainter extends StatefulWidget {
       onUndo: onUndo,
       onClear: onClear,
       velocityBasedStrokeWidth: velocityBasedStrokeWidth,
+      hideModes: hideModes,
     );
   }
 
@@ -140,6 +143,7 @@ class ImagePainter extends StatefulWidget {
     VoidCallback? onUndo,
     VoidCallback? onClear,
     bool velocityBasedStrokeWidth = false,
+    bool hideModes = false,
   }) {
     return ImagePainter._(
       controller: controller,
@@ -168,6 +172,7 @@ class ImagePainter extends StatefulWidget {
       onUndo: onUndo,
       onClear: onClear,
       velocityBasedStrokeWidth: velocityBasedStrokeWidth,
+      hideModes: hideModes,
     );
   }
 
@@ -199,6 +204,7 @@ class ImagePainter extends StatefulWidget {
     VoidCallback? onUndo,
     VoidCallback? onClear,
     bool velocityBasedStrokeWidth = false,
+    bool hideModes = false,
   }) {
     return ImagePainter._(
       controller: controller,
@@ -227,6 +233,7 @@ class ImagePainter extends StatefulWidget {
       onUndo: onUndo,
       onClear: onClear,
       velocityBasedStrokeWidth: velocityBasedStrokeWidth,
+      hideModes: hideModes,
     );
   }
 
@@ -258,6 +265,7 @@ class ImagePainter extends StatefulWidget {
     VoidCallback? onUndo,
     VoidCallback? onClear,
     bool velocityBasedStrokeWidth = false,
+    bool hideModes = false,
   }) {
     return ImagePainter._(
       controller: controller,
@@ -286,6 +294,7 @@ class ImagePainter extends StatefulWidget {
       onUndo: onUndo,
       onClear: onClear,
       velocityBasedStrokeWidth: velocityBasedStrokeWidth,
+      hideModes: hideModes,
     );
   }
 
@@ -421,10 +430,14 @@ class ImagePainter extends StatefulWidget {
   final VoidCallback? onUndo;
 
   final VoidCallback? onClear;
-  
+
   ///Enable velocity-based stroke width for freeStyle painting.
   ///When enabled, faster gestures result in thinner lines.
   final bool velocityBasedStrokeWidth;
+  
+  ///Hide mode selection controls (mode selector, color picker, brush size, fill).
+  ///Only undo and clear buttons will be shown.
+  final bool hideModes;
 
   @override
   ImagePainterState createState() => ImagePainterState();
@@ -446,10 +459,11 @@ class ImagePainterState extends State<ImagePainter> {
     super.initState();
     _isLoaded = ValueNotifier<bool>(false);
     _controller = widget.controller;
-    
+
     // Set velocity-based stroke width setting
-    _controller.update(velocityBasedStrokeWidth: widget.velocityBasedStrokeWidth);
-    
+    _controller.update(
+        velocityBasedStrokeWidth: widget.velocityBasedStrokeWidth);
+
     if (widget.isSignature) {
       _controller.update(
         mode: PaintMode.freeStyle,
@@ -680,9 +694,10 @@ class ImagePainterState extends State<ImagePainter> {
       _controller.setStart(_zoomAdjustedOffset);
       _controller.addOffsets(_zoomAdjustedOffset);
     }
-    
+
     // Start velocity tracking for freeStyle mode (works for both signature and regular drawing)
-    if (_controller.mode == PaintMode.freeStyle && _controller.velocityBasedStrokeWidth) {
+    if (_controller.mode == PaintMode.freeStyle &&
+        _controller.velocityBasedStrokeWidth) {
       _controller.resetVelocityTracking();
       _controller.addVelocityPoint(_zoomAdjustedOffset);
     }
@@ -699,7 +714,7 @@ class ImagePainterState extends State<ImagePainter> {
     _controller.setEnd(_zoomAdjustedOffset);
     if (_controller.mode == PaintMode.freeStyle) {
       _controller.addOffsets(_zoomAdjustedOffset);
-      
+
       // Add velocity point for freeStyle mode
       if (_controller.velocityBasedStrokeWidth) {
         _controller.addVelocityPoint(_zoomAdjustedOffset);
@@ -721,7 +736,7 @@ class ImagePainterState extends State<ImagePainter> {
       _controller.addOffsets(null);
       _addFreeStylePoints();
       _controller.offsets.clear();
-      
+
       // Clear velocity points after adding to history
       if (_controller.velocityBasedStrokeWidth) {
         _controller.velocityPoints.clear();
@@ -751,7 +766,7 @@ class ImagePainterState extends State<ImagePainter> {
           mode: PaintMode.freeStyle,
           color: _controller.color,
           strokeWidth: _controller.scaledStrokeWidth,
-          velocityPoints: _controller.velocityBasedStrokeWidth 
+          velocityPoints: _controller.velocityBasedStrokeWidth
               ? List<VelocityPoint>.from(_controller.velocityPoints)
               : null,
         ),
@@ -878,82 +893,86 @@ class ImagePainterState extends State<ImagePainter> {
       color: widget.controlsBackgroundColor ?? Colors.grey[200],
       child: Row(
         children: [
-          AnimatedBuilder(
-            animation: _controller,
-            builder: (_, __) {
-              final icon = paintModes(textDelegate)
-                  .firstWhere((item) => item.mode == _controller.mode)
-                  .icon;
-              return PopupMenuButton(
-                tooltip: textDelegate.changeMode,
-                shape: ContinuousRectangleBorder(
-                  borderRadius: BorderRadius.circular(40),
-                ),
-                surfaceTintColor: Colors.transparent,
-                icon: Icon(icon, color: widget.optionColor ?? Colors.grey[700]),
-                itemBuilder: (_) => [_showOptionsRow()],
-              );
-            },
-          ),
-          AnimatedBuilder(
-            animation: _controller,
-            builder: (_, __) {
-              return PopupMenuButton(
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                shape: ContinuousRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                surfaceTintColor: Colors.transparent,
-                tooltip: textDelegate.changeColor,
-                icon: widget.colorIcon ??
-                    Container(
-                      padding: const EdgeInsets.all(2.0),
-                      height: 24,
-                      width: 24,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.grey),
-                        color: _controller.color,
-                      ),
-                    ),
-                itemBuilder: (_) => [_showColorPicker()],
-              );
-            },
-          ),
-          PopupMenuButton(
-            tooltip: textDelegate.changeBrushSize,
-            surfaceTintColor: Colors.transparent,
-            shape: ContinuousRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-            icon:
-                widget.brushIcon ?? Icon(Icons.brush, color: Colors.grey[700]),
-            itemBuilder: (_) => [_showRangeSlider()],
-          ),
-          AnimatedBuilder(
-            animation: _controller,
-            builder: (_, __) {
-              if (_controller.canFill()) {
-                return Row(
-                  children: [
-                    Checkbox(
-                      value: _controller.shouldFill,
-                      onChanged: (val) {
-                        _controller.update(fill: val);
-                      },
-                    ),
-                    Text(
-                      textDelegate.fill,
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    )
-                  ],
+          // Mode selection controls (hidden when hideModes is true)
+          if (!widget.hideModes) ...[
+            AnimatedBuilder(
+              animation: _controller,
+              builder: (_, __) {
+                final icon = paintModes(textDelegate)
+                    .firstWhere((item) => item.mode == _controller.mode)
+                    .icon;
+                return PopupMenuButton(
+                  tooltip: textDelegate.changeMode,
+                  shape: ContinuousRectangleBorder(
+                    borderRadius: BorderRadius.circular(40),
+                  ),
+                  surfaceTintColor: Colors.transparent,
+                  icon: Icon(icon, color: widget.optionColor ?? Colors.grey[700]),
+                  itemBuilder: (_) => [_showOptionsRow()],
                 );
-              } else {
-                return const SizedBox();
-              }
-            },
-          ),
+              },
+            ),
+            AnimatedBuilder(
+              animation: _controller,
+              builder: (_, __) {
+                return PopupMenuButton(
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  shape: ContinuousRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  surfaceTintColor: Colors.transparent,
+                  tooltip: textDelegate.changeColor,
+                  icon: widget.colorIcon ??
+                      Container(
+                        padding: const EdgeInsets.all(2.0),
+                        height: 24,
+                        width: 24,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.grey),
+                          color: _controller.color,
+                        ),
+                      ),
+                  itemBuilder: (_) => [_showColorPicker()],
+                );
+              },
+            ),
+            PopupMenuButton(
+              tooltip: textDelegate.changeBrushSize,
+              surfaceTintColor: Colors.transparent,
+              shape: ContinuousRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              icon:
+                  widget.brushIcon ?? Icon(Icons.brush, color: Colors.grey[700]),
+              itemBuilder: (_) => [_showRangeSlider()],
+            ),
+            AnimatedBuilder(
+              animation: _controller,
+              builder: (_, __) {
+                if (_controller.canFill()) {
+                  return Row(
+                    children: [
+                      Checkbox(
+                        value: _controller.shouldFill,
+                        onChanged: (val) {
+                          _controller.update(fill: val);
+                        },
+                      ),
+                      Text(
+                        textDelegate.fill,
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      )
+                    ],
+                  );
+                } else {
+                  return const SizedBox();
+                }
+              },
+            ),
+          ],
           const Spacer(),
+          // Always visible: Undo and Clear buttons
           IconButton(
             tooltip: textDelegate.undo,
             icon: widget.undoIcon ?? Icon(Icons.reply, color: Colors.grey[700]),
