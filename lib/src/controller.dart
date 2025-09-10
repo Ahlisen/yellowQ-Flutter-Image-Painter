@@ -135,6 +135,11 @@ class ImagePainterController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setVelocityFactor(double factor) {
+    _velocityFactor = factor;
+    notifyListeners();
+  }
+
   void setMode(PaintMode mode) {
     _mode = mode;
     notifyListeners();
