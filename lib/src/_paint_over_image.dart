@@ -50,6 +50,7 @@ class ImagePainter extends StatefulWidget {
     this.optionColor,
     this.onUndo,
     this.onClear,
+    this.velocityBasedStrokeWidth = false,
   }) : super(key: key);
 
   ///Constructor for loading image from network url.
@@ -79,6 +80,7 @@ class ImagePainter extends StatefulWidget {
     Color? optionColor,
     VoidCallback? onUndo,
     VoidCallback? onClear,
+    bool velocityBasedStrokeWidth = false,
   }) {
     return ImagePainter._(
       key: key,
@@ -106,6 +108,7 @@ class ImagePainter extends StatefulWidget {
       optionColor: optionColor,
       onUndo: onUndo,
       onClear: onClear,
+      velocityBasedStrokeWidth: velocityBasedStrokeWidth,
     );
   }
 
@@ -136,6 +139,7 @@ class ImagePainter extends StatefulWidget {
     Color? optionColor,
     VoidCallback? onUndo,
     VoidCallback? onClear,
+    bool velocityBasedStrokeWidth = false,
   }) {
     return ImagePainter._(
       controller: controller,
@@ -163,6 +167,7 @@ class ImagePainter extends StatefulWidget {
       optionColor: optionColor,
       onUndo: onUndo,
       onClear: onClear,
+      velocityBasedStrokeWidth: velocityBasedStrokeWidth,
     );
   }
 
@@ -193,6 +198,7 @@ class ImagePainter extends StatefulWidget {
     Color? optionColor,
     VoidCallback? onUndo,
     VoidCallback? onClear,
+    bool velocityBasedStrokeWidth = false,
   }) {
     return ImagePainter._(
       controller: controller,
@@ -220,6 +226,7 @@ class ImagePainter extends StatefulWidget {
       optionColor: optionColor,
       onUndo: onUndo,
       onClear: onClear,
+      velocityBasedStrokeWidth: velocityBasedStrokeWidth,
     );
   }
 
@@ -250,6 +257,7 @@ class ImagePainter extends StatefulWidget {
     Color? optionColor,
     VoidCallback? onUndo,
     VoidCallback? onClear,
+    bool velocityBasedStrokeWidth = false,
   }) {
     return ImagePainter._(
       controller: controller,
@@ -277,6 +285,7 @@ class ImagePainter extends StatefulWidget {
       optionColor: optionColor,
       onUndo: onUndo,
       onClear: onClear,
+      velocityBasedStrokeWidth: velocityBasedStrokeWidth,
     );
   }
 
@@ -412,6 +421,10 @@ class ImagePainter extends StatefulWidget {
   final VoidCallback? onUndo;
 
   final VoidCallback? onClear;
+  
+  ///Enable velocity-based stroke width for freeStyle painting.
+  ///When enabled, faster gestures result in thinner lines.
+  final bool velocityBasedStrokeWidth;
 
   @override
   ImagePainterState createState() => ImagePainterState();
@@ -433,6 +446,10 @@ class ImagePainterState extends State<ImagePainter> {
     super.initState();
     _isLoaded = ValueNotifier<bool>(false);
     _controller = widget.controller;
+    
+    // Set velocity-based stroke width setting
+    _controller.update(velocityBasedStrokeWidth: widget.velocityBasedStrokeWidth);
+    
     if (widget.isSignature) {
       _controller.update(
         mode: PaintMode.freeStyle,
@@ -662,6 +679,12 @@ class ImagePainterState extends State<ImagePainter> {
     if (!widget.isSignature) {
       _controller.setStart(_zoomAdjustedOffset);
       _controller.addOffsets(_zoomAdjustedOffset);
+      
+      // Start velocity tracking for freeStyle mode
+      if (_controller.mode == PaintMode.freeStyle && _controller.velocityBasedStrokeWidth) {
+        _controller.resetVelocityTracking();
+        _controller.addVelocityPoint(_zoomAdjustedOffset);
+      }
     }
   }
 
@@ -676,6 +699,11 @@ class ImagePainterState extends State<ImagePainter> {
     _controller.setEnd(_zoomAdjustedOffset);
     if (_controller.mode == PaintMode.freeStyle) {
       _controller.addOffsets(_zoomAdjustedOffset);
+      
+      // Add velocity point for freeStyle mode
+      if (_controller.velocityBasedStrokeWidth) {
+        _controller.addVelocityPoint(_zoomAdjustedOffset);
+      }
     }
     if (_controller.onTextUpdateMode) {
       _controller.paintHistory
@@ -693,6 +721,12 @@ class ImagePainterState extends State<ImagePainter> {
       _controller.addOffsets(null);
       _addFreeStylePoints();
       _controller.offsets.clear();
+      
+      // Clear velocity points after adding to history
+      if (_controller.velocityBasedStrokeWidth) {
+        _controller.velocityPoints.clear();
+        _controller.resetVelocityTracking();
+      }
     } else if (_controller.start != null &&
         _controller.end != null &&
         _controller.mode != PaintMode.text) {
@@ -717,6 +751,9 @@ class ImagePainterState extends State<ImagePainter> {
           mode: PaintMode.freeStyle,
           color: _controller.color,
           strokeWidth: _controller.scaledStrokeWidth,
+          velocityPoints: _controller.velocityBasedStrokeWidth 
+              ? List<VelocityPoint>.from(_controller.velocityPoints)
+              : null,
         ),
       );
 

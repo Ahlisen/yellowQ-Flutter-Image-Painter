@@ -16,14 +16,20 @@ class ImagePainterController extends ChangeNotifier {
   Rect _rect = Rect.zero;
 
   final List<Offset?> _offsets = [];
+  
+  final List<VelocityPoint> _velocityPoints = [];
 
   final List<PaintInfo> _paintHistory = [];
 
   Offset? _start, _end;
+  
+  DateTime? _lastTimestamp;
+  Offset? _lastPosition;
 
   int _strokeMultiplier = 1;
   bool _paintInProgress = false;
   bool _isSignature = false;
+  bool _velocityBasedStrokeWidth = false;
 
   ui.Image? get image => _image;
 
@@ -47,6 +53,10 @@ class ImagePainterController extends ChangeNotifier {
   List<PaintInfo> get paintHistory => _paintHistory;
 
   List<Offset?> get offsets => _offsets;
+  
+  List<VelocityPoint> get velocityPoints => _velocityPoints;
+  
+  bool get velocityBasedStrokeWidth => _velocityBasedStrokeWidth;
 
   Offset? get start => _start;
 
@@ -64,12 +74,14 @@ class ImagePainterController extends ChangeNotifier {
     PaintMode mode = PaintMode.freeStyle,
     String text = '',
     bool fill = false,
+    bool velocityBasedStrokeWidth = false,
   }) {
     _strokeWidth = strokeWidth;
     _color = color;
     _mode = mode;
     _text = text;
     _fill = fill;
+    _velocityBasedStrokeWidth = velocityBasedStrokeWidth;
   }
 
   void setImage(ui.Image image) {
@@ -126,6 +138,38 @@ class ImagePainterController extends ChangeNotifier {
     _offsets.add(offset);
     notifyListeners();
   }
+  
+  void addVelocityPoint(Offset offset, {double? customVelocity}) {
+    double velocity = 0.0;
+    
+    if (_lastPosition != null && _lastTimestamp != null) {
+      final currentTime = DateTime.now();
+      final timeDelta = currentTime.difference(_lastTimestamp!).inMicroseconds / 1000000.0; // Convert to seconds
+      
+      if (timeDelta > 0) {
+        final distance = (offset - _lastPosition!).distance;
+        velocity = distance / timeDelta; // pixels per second
+        
+        // Normalize velocity to 0-1 range for easier use
+        // Assuming max reasonable velocity is around 2000 pixels/second
+        velocity = (velocity / 2000.0).clamp(0.0, 1.0);
+      }
+    }
+    
+    _velocityPoints.add(VelocityPoint(
+      offset: offset,
+      velocity: customVelocity ?? velocity,
+    ));
+    
+    _lastPosition = offset;
+    _lastTimestamp = DateTime.now();
+    notifyListeners();
+  }
+  
+  void resetVelocityTracking() {
+    _lastPosition = null;
+    _lastTimestamp = null;
+  }
 
   void setStart(Offset? offset) {
     _start = offset;
@@ -150,6 +194,7 @@ class ImagePainterController extends ChangeNotifier {
     PaintMode? mode,
     String? text,
     int? strokeMultiplier,
+    bool? velocityBasedStrokeWidth,
   }) {
     _strokeWidth = strokeWidth ?? _strokeWidth;
     _color = color ?? _color;
@@ -157,6 +202,7 @@ class ImagePainterController extends ChangeNotifier {
     _mode = mode ?? _mode;
     _text = text ?? _text;
     _strokeMultiplier = strokeMultiplier ?? _strokeMultiplier;
+    _velocityBasedStrokeWidth = velocityBasedStrokeWidth ?? _velocityBasedStrokeWidth;
     notifyListeners();
   }
 

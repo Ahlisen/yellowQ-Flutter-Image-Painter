@@ -39,6 +39,7 @@ class _MobileExampleState extends State<MobileExample> {
         controlsAtTop: false,
         scalable: true,
         textDelegate: TextDelegate(),
+        velocityBasedStrokeWidth: true,
       ),
     );
   }

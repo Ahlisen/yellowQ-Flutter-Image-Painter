@@ -63,15 +63,21 @@ class DrawImage extends CustomPainter {
           canvas.drawPath(_dashPath(path, _painter.strokeWidth), _painter);
           break;
         case PaintMode.freeStyle:
-          for (int i = 0; i < _offset.length - 1; i++) {
-            if (_offset[i] != null && _offset[i + 1] != null) {
-              final _path = Path()
-                ..moveTo(_offset[i]!.dx, _offset[i]!.dy)
-                ..lineTo(_offset[i + 1]!.dx, _offset[i + 1]!.dy);
-              canvas.drawPath(_path, _painter..strokeCap = StrokeCap.round);
-            } else if (_offset[i] != null && _offset[i + 1] == null) {
-              canvas.drawPoints(PointMode.points, [_offset[i]!],
-                  _painter..strokeCap = StrokeCap.round);
+          // Use velocity-based stroke width if velocity points are available
+          if (item.velocityPoints != null && item.velocityPoints!.isNotEmpty) {
+            _drawVelocityBasedFreeStyle(canvas, item.velocityPoints!, _painter);
+          } else {
+            // Fallback to original implementation
+            for (int i = 0; i < _offset.length - 1; i++) {
+              if (_offset[i] != null && _offset[i + 1] != null) {
+                final _path = Path()
+                  ..moveTo(_offset[i]!.dx, _offset[i]!.dy)
+                  ..lineTo(_offset[i + 1]!.dx, _offset[i + 1]!.dy);
+                canvas.drawPath(_path, _painter..strokeCap = StrokeCap.round);
+              } else if (_offset[i] != null && _offset[i + 1] == null) {
+                canvas.drawPoints(PointMode.points, [_offset[i]!],
+                    _painter..strokeCap = StrokeCap.round);
+              }
             }
           }
           break;
@@ -189,10 +195,93 @@ class DrawImage extends CustomPainter {
     return dashPath;
   }
 
+  ///Draws free style with velocity-based variable stroke width
+  void _drawVelocityBasedFreeStyle(
+      Canvas canvas, List<VelocityPoint> velocityPoints, Paint basePainter) {
+    for (int i = 0; i < velocityPoints.length - 1; i++) {
+      final point1 = velocityPoints[i];
+      final point2 = velocityPoints[i + 1];
+
+      // Calculate stroke width based on velocity (inverse relationship - higher velocity = thinner stroke)
+      // Velocity is normalized, so we use a factor to control the effect
+      const velocityFactor =
+          0.8; // Adjust this to control how much velocity affects stroke width
+      final minStroke =
+          basePainter.strokeWidth * 0.2; // Minimum stroke width (20% of base)
+      final maxStroke =
+          basePainter.strokeWidth * 1.0; // Maximum stroke width (100% of base)
+
+      // Use average velocity of the two points for consistent stroke width along the segment
+      final avgVelocity = (point1.velocity + point2.velocity) / 2;
+      final velocityInfluence =
+          (1.0 - (avgVelocity * velocityFactor)).clamp(0.0, 1.0);
+      final strokeWidth =
+          minStroke + (maxStroke - minStroke) * velocityInfluence;
+
+      final painter = Paint()
+        ..color = basePainter.color
+        ..strokeWidth = strokeWidth
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round;
+
+      final path = Path()
+        ..moveTo(point1.offset.dx, point1.offset.dy)
+        ..lineTo(point2.offset.dx, point2.offset.dy);
+      canvas.drawPath(path, painter);
+    }
+
+    // Draw single points if there's only one point
+    if (velocityPoints.length == 1) {
+      final point = velocityPoints[0];
+      const velocityFactor = 0.3;
+      final minStroke = basePainter.strokeWidth * 0.2;
+      final maxStroke = basePainter.strokeWidth * 1.0;
+
+      final velocityInfluence =
+          (1.0 - (point.velocity * velocityFactor)).clamp(0.0, 1.0);
+      final strokeWidth =
+          minStroke + (maxStroke - minStroke) * velocityInfluence;
+
+      final painter = Paint()
+        ..color = basePainter.color
+        ..strokeWidth = strokeWidth
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round;
+
+      canvas.drawPoints(PointMode.points, [point.offset], painter);
+    }
+  }
+
   @override
   bool shouldRepaint(DrawImage oldInfo) {
     return oldInfo._controller != _controller;
   }
+}
+
+///Represents a point with its offset and velocity for variable stroke width
+@immutable
+class VelocityPoint {
+  final Offset offset;
+  final double velocity;
+
+  const VelocityPoint({
+    required this.offset,
+    this.velocity = 0.0,
+  });
+
+  @override
+  String toString() => 'VelocityPoint(offset: $offset, velocity: $velocity)';
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is VelocityPoint &&
+          runtimeType == other.runtimeType &&
+          offset == other.offset &&
+          velocity == other.velocity;
+
+  @override
+  int get hashCode => offset.hashCode ^ velocity.hashCode;
 }
 
 ///All the paint method available for use.
@@ -238,6 +327,10 @@ class PaintInfo {
   ///Two point in case of other shapes and list of points for [FreeStyle].
   List<Offset?> offsets;
 
+  ///Used to save velocity points for freeStyle with variable stroke width.
+  ///Only used when velocityBasedStrokeWidth is enabled.
+  List<VelocityPoint>? velocityPoints;
+
   ///Used to save text in case of text type.
   String text;
 
@@ -265,5 +358,6 @@ class PaintInfo {
     required this.strokeWidth,
     this.text = '',
     this.fill = false,
+    this.velocityPoints,
   });
 }
