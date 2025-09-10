@@ -25,12 +25,14 @@ class ImagePainterController extends ChangeNotifier {
   
   DateTime? _lastTimestamp;
   Offset? _lastPosition;
+  final List<double> _recentVelocities = [];
 
   int _strokeMultiplier = 1;
   bool _paintInProgress = false;
   bool _isSignature = false;
   bool _velocityBasedStrokeWidth = false;
   double _velocityFactor = 0.8;
+  int _velocitySmoothingWindow = 5;
 
   ui.Image? get image => _image;
 
@@ -60,6 +62,8 @@ class ImagePainterController extends ChangeNotifier {
   bool get velocityBasedStrokeWidth => _velocityBasedStrokeWidth;
   
   double get velocityFactor => _velocityFactor;
+  
+  int get velocitySmoothingWindow => _velocitySmoothingWindow;
 
   Offset? get start => _start;
 
@@ -79,6 +83,7 @@ class ImagePainterController extends ChangeNotifier {
     bool fill = false,
     bool velocityBasedStrokeWidth = false,
     double velocityFactor = 0.8,
+    int velocitySmoothingWindow = 5,
   }) {
     _strokeWidth = strokeWidth;
     _color = color;
@@ -87,6 +92,7 @@ class ImagePainterController extends ChangeNotifier {
     _fill = fill;
     _velocityBasedStrokeWidth = velocityBasedStrokeWidth;
     _velocityFactor = velocityFactor;
+    _velocitySmoothingWindow = velocitySmoothingWindow;
   }
 
   void setImage(ui.Image image) {
@@ -145,7 +151,7 @@ class ImagePainterController extends ChangeNotifier {
   }
   
   void addVelocityPoint(Offset offset, {double? customVelocity}) {
-    double velocity = 0.0;
+    double rawVelocity = 0.0;
     
     if (_lastPosition != null && _lastTimestamp != null) {
       final currentTime = DateTime.now();
@@ -153,17 +159,31 @@ class ImagePainterController extends ChangeNotifier {
       
       if (timeDelta > 0) {
         final distance = (offset - _lastPosition!).distance;
-        velocity = distance / timeDelta; // pixels per second
+        rawVelocity = distance / timeDelta; // pixels per second
         
         // Normalize velocity to 0-1 range for easier use
         // Assuming max reasonable velocity is around 2000 pixels/second
-        velocity = (velocity / 2000.0).clamp(0.0, 1.0);
+        rawVelocity = (rawVelocity / 2000.0).clamp(0.0, 1.0);
       }
+    }
+    
+    // Add raw velocity to recent velocities for smoothing
+    _recentVelocities.add(rawVelocity);
+    
+    // Keep only the most recent velocities within the smoothing window
+    if (_recentVelocities.length > _velocitySmoothingWindow) {
+      _recentVelocities.removeAt(0);
+    }
+    
+    // Calculate smoothed velocity using moving average
+    double smoothedVelocity = rawVelocity;
+    if (_recentVelocities.isNotEmpty) {
+      smoothedVelocity = _recentVelocities.reduce((a, b) => a + b) / _recentVelocities.length;
     }
     
     _velocityPoints.add(VelocityPoint(
       offset: offset,
-      velocity: customVelocity ?? velocity,
+      velocity: customVelocity ?? smoothedVelocity,
     ));
     
     _lastPosition = offset;
@@ -174,6 +194,7 @@ class ImagePainterController extends ChangeNotifier {
   void resetVelocityTracking() {
     _lastPosition = null;
     _lastTimestamp = null;
+    _recentVelocities.clear();
   }
 
   void setStart(Offset? offset) {
@@ -201,6 +222,7 @@ class ImagePainterController extends ChangeNotifier {
     int? strokeMultiplier,
     bool? velocityBasedStrokeWidth,
     double? velocityFactor,
+    int? velocitySmoothingWindow,
   }) {
     _strokeWidth = strokeWidth ?? _strokeWidth;
     _color = color ?? _color;
@@ -210,6 +232,7 @@ class ImagePainterController extends ChangeNotifier {
     _strokeMultiplier = strokeMultiplier ?? _strokeMultiplier;
     _velocityBasedStrokeWidth = velocityBasedStrokeWidth ?? _velocityBasedStrokeWidth;
     _velocityFactor = velocityFactor ?? _velocityFactor;
+    _velocitySmoothingWindow = velocitySmoothingWindow ?? _velocitySmoothingWindow;
     notifyListeners();
   }
 
