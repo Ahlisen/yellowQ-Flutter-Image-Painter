@@ -136,16 +136,23 @@ class DrawImage extends CustomPainter {
           canvas.drawPath(_dashPath(path, _paint.strokeWidth), _paint);
           break;
         case PaintMode.freeStyle:
-          final points = _controller.offsets;
-          for (int i = 0; i < _controller.offsets.length - 1; i++) {
-            if (points[i] != null && points[i + 1] != null) {
-              canvas.drawLine(
-                  Offset(points[i]!.dx, points[i]!.dy),
-                  Offset(points[i + 1]!.dx, points[i + 1]!.dy),
-                  _paint..strokeCap = StrokeCap.round);
-            } else if (points[i] != null && points[i + 1] == null) {
-              canvas.drawPoints(PointMode.points,
-                  [Offset(points[i]!.dx, points[i]!.dy)], _paint);
+          // Use velocity-based drawing for live preview if enabled and velocity points available
+          if (_controller.velocityBasedStrokeWidth && 
+              _controller.velocityPoints.isNotEmpty) {
+            _drawVelocityBasedFreeStyle(canvas, _controller.velocityPoints, _paint, _controller);
+          } else {
+            // Fallback to original live drawing
+            final points = _controller.offsets;
+            for (int i = 0; i < _controller.offsets.length - 1; i++) {
+              if (points[i] != null && points[i + 1] != null) {
+                canvas.drawLine(
+                    Offset(points[i]!.dx, points[i]!.dy),
+                    Offset(points[i + 1]!.dx, points[i + 1]!.dy),
+                    _paint..strokeCap = StrokeCap.round);
+              } else if (points[i] != null && points[i + 1] == null) {
+                canvas.drawPoints(PointMode.points,
+                    [Offset(points[i]!.dx, points[i]!.dy)], _paint);
+              }
             }
           }
           break;

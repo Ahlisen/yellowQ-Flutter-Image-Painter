@@ -14,8 +14,8 @@ class MobileExample extends StatefulWidget {
 
 class _MobileExampleState extends State<MobileExample> {
   final ImagePainterController _controller = ImagePainterController(
-    color: Colors.green,
-    strokeWidth: 10,
+    color: Colors.black,
+    strokeWidth: 20,
     mode: PaintMode.freeStyle,
     velocityBasedStrokeWidth: true,
     velocityFactor: 0.8,

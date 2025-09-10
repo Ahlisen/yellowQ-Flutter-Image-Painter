@@ -679,12 +679,12 @@ class ImagePainterState extends State<ImagePainter> {
     if (!widget.isSignature) {
       _controller.setStart(_zoomAdjustedOffset);
       _controller.addOffsets(_zoomAdjustedOffset);
-      
-      // Start velocity tracking for freeStyle mode
-      if (_controller.mode == PaintMode.freeStyle && _controller.velocityBasedStrokeWidth) {
-        _controller.resetVelocityTracking();
-        _controller.addVelocityPoint(_zoomAdjustedOffset);
-      }
+    }
+    
+    // Start velocity tracking for freeStyle mode (works for both signature and regular drawing)
+    if (_controller.mode == PaintMode.freeStyle && _controller.velocityBasedStrokeWidth) {
+      _controller.resetVelocityTracking();
+      _controller.addVelocityPoint(_zoomAdjustedOffset);
     }
   }
 
