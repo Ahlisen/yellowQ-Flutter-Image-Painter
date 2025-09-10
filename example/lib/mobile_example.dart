@@ -22,8 +22,10 @@ class _MobileExampleState extends State<MobileExample> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
         title: const Text("Image Painter Example"),
+        backgroundColor: Colors.transparent,
         actions: [
           IconButton(
             icon: const Icon(Icons.save_alt),
@@ -34,6 +36,7 @@ class _MobileExampleState extends State<MobileExample> {
       body: ImagePainter.asset(
         "assets/sample.jpg",
         controller: _controller,
+        controlsAtTop: false,
         scalable: true,
         textDelegate: TextDelegate(),
       ),

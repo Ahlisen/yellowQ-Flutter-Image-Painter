@@ -28,6 +28,7 @@ class ImagePainter extends StatefulWidget {
     this.file,
     this.height,
     this.width,
+    this.heightFraction,
     this.placeHolder,
     this.isScalable,
     this.brushIcon,
@@ -58,6 +59,7 @@ class ImagePainter extends StatefulWidget {
     Key? key,
     double? height,
     double? width,
+    double? heightFraction,
     Widget? placeholderWidget,
     bool? scalable,
     List<Color>? colors,
@@ -84,6 +86,7 @@ class ImagePainter extends StatefulWidget {
       networkUrl: url,
       height: height,
       width: width,
+      heightFraction: heightFraction,
       placeHolder: placeholderWidget,
       isScalable: scalable,
       colors: colors,
@@ -113,6 +116,7 @@ class ImagePainter extends StatefulWidget {
     Key? key,
     double? height,
     double? width,
+    double? heightFraction,
     bool? scalable,
     Widget? placeholderWidget,
     List<Color>? colors,
@@ -139,6 +143,7 @@ class ImagePainter extends StatefulWidget {
       assetPath: path,
       height: height,
       width: width,
+      heightFraction: heightFraction,
       isScalable: scalable ?? false,
       placeHolder: placeholderWidget,
       colors: colors,
@@ -168,6 +173,7 @@ class ImagePainter extends StatefulWidget {
     Key? key,
     double? height,
     double? width,
+    double? heightFraction,
     bool? scalable,
     Widget? placeholderWidget,
     List<Color>? colors,
@@ -194,6 +200,7 @@ class ImagePainter extends StatefulWidget {
       file: file,
       height: height,
       width: width,
+      heightFraction: heightFraction,
       placeHolder: placeholderWidget,
       colors: colors,
       isScalable: scalable ?? false,
@@ -223,6 +230,7 @@ class ImagePainter extends StatefulWidget {
     Key? key,
     double? height,
     double? width,
+    double? heightFraction,
     bool? scalable,
     Widget? placeholderWidget,
     List<Color>? colors,
@@ -249,6 +257,7 @@ class ImagePainter extends StatefulWidget {
       byteArray: byteArray,
       height: height,
       width: width,
+      heightFraction: heightFraction,
       placeHolder: placeholderWidget,
       isScalable: scalable ?? false,
       colors: colors,
@@ -344,6 +353,9 @@ class ImagePainter extends StatefulWidget {
 
   ///Width of the widget. Image is subjected to fit within the given width.
   final double? width;
+
+  ///Fraction of screen height to use when height is not specified. Defaults to 0.7.
+  final double? heightFraction;
 
   ///Widget to be shown during the conversion of provided image to [ui.Image].
   final Widget? placeHolder;
@@ -542,14 +554,16 @@ class ImagePainterState extends State<ImagePainter> {
   ///paints image on given constrains for drawing if image is not null.
   Widget _paintImage() {
     return Container(
-      height: widget.height ?? double.maxFinite,
+      height: widget.height ??
+          MediaQuery.of(context).size.height * (widget.heightFraction ?? 0.7),
       width: widget.width ?? double.maxFinite,
       child: Column(
         children: [
           if (widget.controlsAtTop && widget.showControls) _buildControls(),
           Expanded(
             child: FittedBox(
-              alignment: FractionalOffset.center,
+              fit: BoxFit.cover,
+              alignment: FractionalOffset.topCenter,
               child: ClipRect(
                 child: AnimatedBuilder(
                   animation: _controller,
